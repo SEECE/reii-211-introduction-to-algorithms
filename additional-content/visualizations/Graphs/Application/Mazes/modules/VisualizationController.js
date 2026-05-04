@@ -70,6 +70,9 @@ const VisualizationController = (function() {
         reset,
         isSolving,
         setSolving,
-        getGridAtStep
+        getGridAtStep,
+        // Expose currentStep for direct access (used in Mazes.js animation)
+        get currentStep() { return currentStep; },
+        set currentStep(value) { currentStep = value; }
     };
 })();

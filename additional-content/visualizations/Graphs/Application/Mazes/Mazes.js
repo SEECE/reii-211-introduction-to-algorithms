@@ -11,6 +11,7 @@ const MAX_CANVAS_H = Math.min(window.innerHeight - 180, 700);
 let numRows = 51;
 let numCols = 51;
 let grid = [];
+let animationTimeout = null; // Track animation timeout for cleanup
 
 // Initialize modules
 CanvasRenderer.init();
@@ -30,6 +31,12 @@ function redraw() {
 
 function resetSolution() {
     if (VisualizationController.isSolving()) return;
+    
+    // Clear any ongoing animation
+    if (animationTimeout) {
+        clearTimeout(animationTimeout);
+        animationTimeout = null;
+    }
 
     for (let r = 0; r < numRows; r++) {
         for (let c = 0; c < numCols; c++) {
@@ -38,8 +45,18 @@ function resetSolution() {
             }
         }
     }
-    grid[1][1] = CELL.START;
-    grid[numRows - 2][numCols - 2] = CELL.END;
+    
+    // Restore start and end
+    let startFound = false, endFound = false;
+    for (let r = 0; r < numRows; r++) {
+        for (let c = 0; c < numCols; c++) {
+            if (grid[r][c] === CELL.START) startFound = true;
+            if (grid[r][c] === CELL.END) endFound = true;
+        }
+    }
+    
+    if (!startFound) grid[1][1] = CELL.START;
+    if (!endFound) grid[numRows - 2][numCols - 2] = CELL.END;
 
     VisualizationController.reset();
     redraw();
@@ -69,17 +86,39 @@ async function runSolverAnimated(algo) {
     }
 
     VisualizationController.setSteps(result.steps);
-
-    for (let i = 0; i < result.steps.length; i++) {
-        if (!VisualizationController.isSolving()) break;
-        grid = result.steps[i].map(row => [...row]);
-        redraw();
-        await new Promise(resolve => setTimeout(resolve, ui.getSpeedDelay()));
+    
+    // Animate through steps with proper delay
+    let stepIndex = 0;
+    
+    function animateStep() {
+        if (!VisualizationController.isSolving()) {
+            // Animation was cancelled
+            solveBtn.disabled = false;
+            solveBtn.textContent = "Solve Maze";
+            return;
+        }
+        
+        if (stepIndex < result.steps.length) {
+            grid = result.steps[stepIndex].map(row => [...row]);
+            redraw();
+            stepIndex++;
+            VisualizationController.currentStep = stepIndex; // Update current step
+            ui.updateStepUI(stepIndex, result.steps.length);
+            
+            // Get delay from UI - this will reflect current slider value
+            const delay = ui.getSpeedDelay();
+            animationTimeout = setTimeout(animateStep, delay);
+        } else {
+            // Animation complete
+            VisualizationController.setSolving(false);
+            solveBtn.disabled = false;
+            solveBtn.textContent = "Solve Maze";
+            animationTimeout = null;
+        }
     }
-
-    VisualizationController.setSolving(false);
-    solveBtn.disabled = false;
-    solveBtn.textContent = "Solve Maze";
+    
+    // Start animation
+    animateStep();
 }
 
 function runSolver(algo) {
@@ -113,7 +152,14 @@ function runSolver(algo) {
 // Event listeners
 function setupEventListeners() {
     document.getElementById("generateBtn")?.addEventListener("click", () => {
-        if (VisualizationController.isSolving()) return;
+        if (VisualizationController.isSolving()) {
+            // Cancel ongoing animation
+            if (animationTimeout) {
+                clearTimeout(animationTimeout);
+                animationTimeout = null;
+            }
+            VisualizationController.setSolving(false);
+        }
 
         const rawRows = ui.getNumRows();
         const rawCols = ui.getNumCols();
@@ -128,15 +174,33 @@ function setupEventListeners() {
         grid = MazeGenerator.generateMaze(numRows, numCols);
         CanvasRenderer.resizeCanvas(numRows, numCols, MAX_CANVAS_W, MAX_CANVAS_H);
         redraw();
+        
+        const solveBtn = document.getElementById("solveBtn");
+        if (solveBtn) {
+            solveBtn.disabled = false;
+            solveBtn.textContent = "Solve Maze";
+        }
     });
 
     document.getElementById("clearBtn")?.addEventListener("click", () => {
-        if (VisualizationController.isSolving()) return;
+        if (VisualizationController.isSolving()) {
+            if (animationTimeout) {
+                clearTimeout(animationTimeout);
+                animationTimeout = null;
+            }
+            VisualizationController.setSolving(false);
+        }
 
         VisualizationController.reset();
         grid = MazeGenerator.initGrid(numRows, numCols);
         CanvasRenderer.resizeCanvas(numRows, numCols, MAX_CANVAS_W, MAX_CANVAS_H);
         redraw();
+        
+        const solveBtn = document.getElementById("solveBtn");
+        if (solveBtn) {
+            solveBtn.disabled = false;
+            solveBtn.textContent = "Solve Maze";
+        }
     });
 
     document.getElementById("resetSolutionBtn")?.addEventListener("click", () => {
@@ -175,18 +239,15 @@ function setupEventListeners() {
 
     document.getElementById("visualiseCheck")?.addEventListener("change", (e) => {
         const stepControls = document.getElementById("stepControls");
-        const speedControl = document.getElementById("speedControl"); // This is the slider
-
-        // Step controls (Back/Forward) should only show in step mode
+        
         if (stepControls) stepControls.style.display = e.target.checked ? "flex" : "none";
 
-        // KEEP SPEED CONTROL ALWAYS VISIBLE (Remove the toggle for speedControl)
-        // speedControl.style.display = "block"; // You can just set this to always show
-
         if (!e.target.checked && VisualizationController.isSolving()) {
-            VisualizationController.setSolving(false);
-        }
-        if (!e.target.checked && VisualizationController.isSolving()) {
+            // Cancel animation if switching modes mid-solve
+            if (animationTimeout) {
+                clearTimeout(animationTimeout);
+                animationTimeout = null;
+            }
             VisualizationController.setSolving(false);
         }
         if (!e.target.checked) {
@@ -202,19 +263,16 @@ function setupEventListeners() {
         });
     });
 
-
+    // Speed slider live update - show current speed
     document.getElementById("slider-speed")?.addEventListener("input", () => {
-        ui.getSpeedDelay(); // just to refresh label
+        ui.getSpeedDelay(); // This updates the label
     });
 }
 
 // Initialize
 (function init() {
     const stepControls = document.getElementById("stepControls");
-    const speedControl = document.getElementById("speedControl");
-
     if (stepControls) stepControls.style.display = "none";
-    if (speedControl) speedControl.style.display = "block";
 
     grid = MazeGenerator.generateMaze(numRows, numCols);
     CanvasRenderer.resizeCanvas(numRows, numCols, MAX_CANVAS_W, MAX_CANVAS_H);

@@ -19,6 +19,18 @@ const MazeGenerator = (function() {
         return v;
     }
     
+    function getAllPassableCells(grid, rows, cols) {
+        const passable = [];
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if (grid[r][c] === CELL.PATH) {
+                    passable.push([r, c]);
+                }
+            }
+        }
+        return passable;
+    }
+    
     function generateMaze(rows, cols) {
         const grid = initGrid(rows, cols);
         const DIRS = [[-2,0], [2,0], [0,-2], [0,2]];
@@ -71,8 +83,25 @@ const MazeGenerator = (function() {
             addToFrontier(fr, fc);
         }
         
+        // Set start position (always top-left-ish area)
         grid[1][1] = CELL.START;
-        grid[rows - 2][cols - 2] = CELL.END;
+        
+        // Find random end position (not too close to start)
+        const passableCells = getAllPassableCells(grid, rows, cols);
+        // Filter out cells too close to start (within 3 cells)
+        const farCells = passableCells.filter(([r, c]) => {
+            const distance = Math.abs(r - 1) + Math.abs(c - 1);
+            return distance > 5; // Ensure end is reasonably far from start
+        });
+        
+        if (farCells.length > 0) {
+            const randomIndex = Math.floor(Math.random() * farCells.length);
+            const [endR, endC] = farCells[randomIndex];
+            grid[endR][endC] = CELL.END;
+        } else {
+            // Fallback to bottom-right if no far cells found
+            grid[rows - 2][cols - 2] = CELL.END;
+        }
         
         return grid;
     }
