@@ -1,13 +1,16 @@
 /**
  * Mazes.js  –  main entry point
  *
- * Maze generation: Recursive Backtracker (DFS carve)
- *   – Creates a perfect maze (exactly one path between any two cells)
- *   – Iterative stack-based implementation (no call-stack overflow on large grids)
+ * Maze generation: Randomised Prim's Algorithm
+ *   – Creates a perfect maze with dense branching and many dead-ends.
+ *   – Grows outward from a seed, randomly picking frontier walls to knock down.
+ *   – Produces a visually rich maze with many short dead-end corridors and
+ *     frequent junctions — very different from the single-winding-path that
+ *     Recursive Backtracker tends to produce.
  *
- * Planned solvers (not wired yet):
- *   DFS.js   –  depth-first search
- *   BFS.js   –  breadth-first search
+ * Solvers (loaded from separate scripts):
+ *   BFS.js   –  breadth-first search  (window.solveBFS)
+ *   DFS.js   –  depth-first search    (window.solveDFS)
  */
 
 // ─────────────────────────────────────────────
@@ -16,9 +19,7 @@
 const canvas = document.getElementById("mazeCanvas");
 const ctx    = canvas.getContext("2d");
 
-// The canvas fills the remaining horizontal space.
-// We size it once and reuse; cells are drawn to fit.
-const MAX_CANVAS_W = Math.max(400, window.innerWidth - 340);  // leave room for controls
+const MAX_CANVAS_W = Math.max(400, window.innerWidth - 340);
 const MAX_CANVAS_H = Math.min(window.innerHeight - 180, 700);
 
 // ─────────────────────────────────────────────
@@ -45,9 +46,9 @@ const COLOUR = {
 // ─────────────────────────────────────────────
 //  State
 // ─────────────────────────────────────────────
-let numRows = 51;
-let numCols = 151;
-let grid    = [];        // grid[row][col] = CELL.*
+let numRows     = 51;
+let numCols     = 151;
+let grid        = [];
 let allSteps    = [];
 let currentStep = 0;
 
@@ -55,17 +56,15 @@ let currentStep = 0;
 //  Canvas sizing
 // ─────────────────────────────────────────────
 function resizeCanvas() {
-    // Cell pixel size: fit both dimensions, use the smaller
     const cellW = Math.floor(MAX_CANVAS_W / numCols);
     const cellH = Math.floor(MAX_CANVAS_H / numRows);
     const cs    = Math.max(1, Math.min(cellW, cellH));
-
     canvas.width  = cs * numCols;
     canvas.height = cs * numRows;
 }
 
 function cellSize() {
-    return canvas.width / numCols;   // always square cells after resizeCanvas
+    return canvas.width / numCols;
 }
 
 // ─────────────────────────────────────────────
@@ -81,69 +80,83 @@ function initGrid(rows, cols) {
 }
 
 // ─────────────────────────────────────────────
-//  Maze generation – Recursive Backtracker
+//  Maze generation – Randomised Prim's
 //
-//  The maze is built on a "cell grid" where:
-//    • Odd row/col positions are passage cells
-//    • Even row/col positions are walls between them
+//  The maze is built on a "passage grid" where odd row/col positions
+//  are passage cells and even positions are walls.
 //
-//  We carve passages by removing the wall between two
-//  adjacent passage cells.
+//  Algorithm:
+//    1. Start with all walls.
+//    2. Pick a seed passage cell, add it to the "in" set.
+//    3. Add all passage-cell neighbours of the seed to the "frontier" list.
+//    4. While frontier is non-empty:
+//       a. Pick a random frontier cell F.
+//       b. Find all "in" neighbours of F (passage cells 2 steps away already in maze).
+//       c. Pick one randomly, knock down the wall between F and that neighbour.
+//       d. Add F to "in" set. Add F's un-visited passage neighbours to frontier.
+//
+//  Result: dense, organic maze with lots of branching and short dead-ends.
 // ─────────────────────────────────────────────
 function generateMaze(rows, cols) {
     initGrid(rows, cols);
 
-    // Directions: [dRow, dCol] in passage-cell space (step of 2 in grid space)
-    const DIRS = [
-        [-2, 0],   // up
-        [ 2, 0],   // down
-        [ 0,-2],   // left
-        [ 0, 2],   // right
-    ];
+    const DIRS = [[-2,0],[2,0],[0,-2],[0,2]];
 
-    function shuffle(arr) {
-        for (let i = arr.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [arr[i], arr[j]] = [arr[j], arr[i]];
-        }
-        return arr;
+    function inBounds(r, c) {
+        return r > 0 && r < rows - 1 && c > 0 && c < cols - 1;
     }
 
-    // Start carving from (1, 1) — first interior passage cell
-    const startR = 1, startC = 1;
-    grid[startR][startC] = CELL.PATH;
+    // Mark a passage cell and add its unvisited neighbours to frontier
+    const inMaze   = new Set();
+    const frontier = [];  // Array of [r, c]
+    const inFrontier = new Set();
 
-    // Iterative DFS stack: each entry is {r, c}
-    const stack = [{ r: startR, c: startC }];
-
-    while (stack.length > 0) {
-        const { r, c } = stack[stack.length - 1];
-
-        // Find unvisited neighbours (2 steps away)
-        const neighbours = shuffle(DIRS.map(([dr, dc]) => ({
-            nr: r + dr,
-            nc: c + dc,
-            wr: r + dr / 2,   // wall between current and neighbour
-            wc: c + dc / 2,
-        }))).filter(({ nr, nc }) =>
-            nr > 0 && nr < rows - 1 &&
-            nc > 0 && nc < cols - 1 &&
-            grid[nr][nc] === CELL.WALL
-        );
-
-        if (neighbours.length > 0) {
-            // Pick the first (already shuffled) unvisited neighbour
-            const { nr, nc, wr, wc } = neighbours[0];
-            // Carve through the wall
-            grid[wr][wc] = CELL.PATH;
-            grid[nr][nc] = CELL.PATH;
-            stack.push({ r: nr, c: nc });
-        } else {
-            stack.pop();  // backtrack
+    function addToFrontier(r, c) {
+        for (const [dr, dc] of DIRS) {
+            const nr = r + dr, nc = c + dc;
+            if (inBounds(nr, nc) && !inMaze.has(`${nr},${nc}`) && !inFrontier.has(`${nr},${nc}`)) {
+                frontier.push([nr, nc]);
+                inFrontier.add(`${nr},${nc}`);
+            }
         }
     }
 
-    // Place Start top-left, End bottom-right (on passage cells)
+    // Seed — top-left passage cell
+    const seedR = 1, seedC = 1;
+    grid[seedR][seedC] = CELL.PATH;
+    inMaze.add(`${seedR},${seedC}`);
+    addToFrontier(seedR, seedC);
+
+    while (frontier.length > 0) {
+        // Pick a random frontier cell
+        const idx = Math.floor(Math.random() * frontier.length);
+        const [fr, fc] = frontier[idx];
+        // Remove from frontier (swap with last for O(1) removal)
+        frontier[idx] = frontier[frontier.length - 1];
+        frontier.pop();
+
+        // Find all "in-maze" passage-cell neighbours
+        const inNeighbours = [];
+        for (const [dr, dc] of DIRS) {
+            const nr = fr + dr, nc = fc + dc;
+            if (inBounds(nr, nc) && inMaze.has(`${nr},${nc}`)) {
+                inNeighbours.push([nr, nc]);
+            }
+        }
+
+        if (inNeighbours.length === 0) continue; // Shouldn't happen, but guard anyway
+
+        // Pick a random in-maze neighbour and carve the wall between them
+        const [nr, nc] = inNeighbours[Math.floor(Math.random() * inNeighbours.length)];
+        const wr = (fr + nr) / 2, wc = (fc + nc) / 2; // wall cell between fr,fc and nr,nc
+        grid[wr][wc] = CELL.PATH;
+        grid[fr][fc] = CELL.PATH;
+
+        inMaze.add(`${fr},${fc}`);
+        addToFrontier(fr, fc);
+    }
+
+    // Place Start and End
     grid[1][1]               = CELL.START;
     grid[rows - 2][cols - 2] = CELL.END;
 }
@@ -163,7 +176,6 @@ function drawGrid() {
         }
     }
 
-    // Grid lines only if cells are big enough
     if (cs >= 8) {
         ctx.strokeStyle = "rgba(0,0,0,0.07)";
         ctx.lineWidth   = 0.5;
@@ -224,6 +236,51 @@ function forceOdd(val, min, max) {
     return v;
 }
 
+/**
+ * Run the selected solver.
+ * In step mode: populate allSteps and go to step 0.
+ * In instant mode: apply the final grid immediately.
+ */
+function runSolver(algo) {
+    const isStepMode = document.getElementById("visualiseCheck").checked;
+
+    // Reset any previous solution by re-normalising visited/solution cells back to PATH
+    const cleanGrid = grid.map(row => row.map(cell =>
+        (cell === CELL.VISITED || cell === CELL.SOLUTION) ? CELL.PATH : cell
+    ));
+    grid = cleanGrid;
+
+    let result;
+    if (algo === "bfs") {
+        if (typeof window.solveBFS !== "function") {
+            alert("BFS.js not loaded — make sure it is included in the page.");
+            return;
+        }
+        result = window.solveBFS(grid, numRows, numCols, isStepMode);
+    } else {
+        if (typeof window.solveDFS !== "function") {
+            alert("DFS.js not loaded — make sure it is included in the page.");
+            return;
+        }
+        result = window.solveDFS(grid, numRows, numCols, isStepMode);
+    }
+
+    if (isStepMode) {
+        allSteps    = result.steps;
+        currentStep = 0;
+        if (allSteps.length > 0) {
+            // Show first step
+            grid = allSteps[0].map(row => [...row]);
+        }
+    } else {
+        allSteps    = [];
+        currentStep = 0;
+        grid = result.finalGrid;
+    }
+
+    redraw();
+}
+
 // ─────────────────────────────────────────────
 //  Button wiring
 // ─────────────────────────────────────────────
@@ -255,8 +312,7 @@ document.getElementById("clearBtn").addEventListener("click", () => {
 
 document.getElementById("solveBtn").addEventListener("click", () => {
     const algo = document.querySelector("input[name='algorithm']:checked")?.value;
-    // TODO: wire DFS.js / BFS.js solvers here
-    console.log(`Solve with ${algo} — not yet implemented`);
+    runSolver(algo);
 });
 
 document.getElementById("stepBackBtn").addEventListener("click", () => {
@@ -291,7 +347,7 @@ document.querySelectorAll("input[name='algorithm']").forEach(radio => {
 });
 
 // ─────────────────────────────────────────────
-//  Boot – generate a default maze on load
+//  Boot
 // ─────────────────────────────────────────────
 (function init() {
     document.getElementById("stepControls").style.display = "none";
