@@ -72,8 +72,7 @@
 
         /**
          * Walk from a cell to the next junction/dead-end/goal
-         * Records each step for visualization
-         * Returns the endpoint and records all intermediate steps
+         * Returns the endpoint and the path taken (all cells in the corridor)
          */
         walkToJunction(startR, startC, fromR, fromC) {
             let currentR = startR;
@@ -81,25 +80,12 @@
             let prevR = fromR;
             let prevC = fromC;
             
-            const path = [[currentR, currentC]]; // Track path for recording
+            const path = [[currentR, currentC]]; // Track all cells in this corridor
 
             while (true) {
-                // Mark current cell (preserve START/END)
-                if (this.grid[currentR][currentC] !== CELL.START && 
-                    this.grid[currentR][currentC] !== CELL.END) {
-                    this.grid[currentR][currentC] = CELL.VISITED;
-                }
-
                 // Check if we reached the goal
                 if (currentR === this.goalR && currentC === this.goalC) {
-                    // Record the path to goal
-                    for (const [r, c] of path) {
-                        if (this.grid[r][c] !== CELL.START && this.grid[r][c] !== CELL.END) {
-                            this.grid[r][c] = CELL.VISITED;
-                        }
-                        this.recordSnapshot();
-                    }
-                    return { r: currentR, c: currentC, isGoal: true };
+                    return { r: currentR, c: currentC, isGoal: true, path: path };
                 }
 
                 // Get unvisited neighbours (excluding where we came from)
@@ -110,14 +96,7 @@
                 // If we have 2+ neighbours → junction
                 // If we have 1 neighbour → continue straight
                 if (neighbours.length !== 1) {
-                    // Record the path to this junction
-                    for (const [r, c] of path) {
-                        if (this.grid[r][c] !== CELL.START && this.grid[r][c] !== CELL.END) {
-                            this.grid[r][c] = CELL.VISITED;
-                        }
-                        this.recordSnapshot();
-                    }
-                    return { r: currentR, c: currentC, isGoal: false };
+                    return { r: currentR, c: currentC, isGoal: false, path: path };
                 }
 
                 // Continue straight
@@ -128,6 +107,20 @@
                 currentR = next[0];
                 currentC = next[1];
             }
+        }
+
+        /**
+         * Mark an entire corridor as visited in ONE step
+         */
+        markCorridorVisited(path) {
+            // Mark all cells in the path as visited
+            for (const [r, c] of path) {
+                if (this.grid[r][c] !== CELL.START && this.grid[r][c] !== CELL.END) {
+                    this.grid[r][c] = CELL.VISITED;
+                }
+            }
+            // Record a SINGLE snapshot for the entire corridor
+            this.recordSnapshot();
         }
 
         /**
@@ -177,7 +170,7 @@
         }
 
         /**
-         * Reconstruct solution path
+         * Reconstruct solution path - each corridor fills in ONE step
          */
         reconstructPath(parentMap) {
             // Collect junction waypoints
@@ -190,17 +183,19 @@
                 key = p ? `${p[0]},${p[1]}` : null;
             }
 
-            // Fill paths between waypoints
+            // Fill paths between waypoints - each full path is ONE step
             for (let i = 0; i < waypoints.length - 1; i++) {
                 const [fromR, fromC] = waypoints[i];
                 const [toR, toC] = waypoints[i + 1];
                 const fullPath = this.findFullPath(fromR, fromC, toR, toC);
 
+                // Mark all solution cells in this corridor at once
                 for (const [r, c] of fullPath) {
                     if (this.grid[r][c] !== CELL.START && this.grid[r][c] !== CELL.END) {
                         this.grid[r][c] = CELL.SOLUTION;
                     }
                 }
+                // Single snapshot for the entire solution corridor
                 this.recordSnapshot();
             }
 

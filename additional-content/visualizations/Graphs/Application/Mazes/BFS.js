@@ -34,15 +34,19 @@
                 if (visited.has(neighbourKey)) continue;
 
                 // Walk from this neighbour to the next junction
-                const endpoint = solver.walkToJunction(nr, nc, r, c);
-                const epKey = `${endpoint.r},${endpoint.c}`;
+                const corridor = solver.walkToJunction(nr, nc, r, c);
+                
+                // Mark the entire corridor as visited in ONE step
+                solver.markCorridorVisited(corridor.path);
+                
+                const epKey = `${corridor.r},${corridor.c}`;
 
                 if (!visited.has(epKey)) {
                     visited.add(epKey);
                     parent.set(epKey, [r, c]);
-                    queue.push([endpoint.r, endpoint.c]);
+                    queue.push([corridor.r, corridor.c]);
 
-                    if (endpoint.isGoal) {
+                    if (corridor.isGoal) {
                         found = true;
                         break;
                     }
