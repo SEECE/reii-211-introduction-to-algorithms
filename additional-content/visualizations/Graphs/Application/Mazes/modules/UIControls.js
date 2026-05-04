@@ -3,8 +3,8 @@
  */
 
 const UIControls = (function() {
-    let numRows = 51;
-    let numCols = 151;
+    let numRows = 51; 
+    let numCols = 51;
     
     function generateControlsHTML() {
         return `

@@ -4,12 +4,12 @@
  */
 
 // Constants
-const MAX_CANVAS_W = Math.max(400, window.innerWidth - 340);
+const MAX_CANVAS_W = Math.max(400, window.innerWidth - 380);
 const MAX_CANVAS_H = Math.min(window.innerHeight - 180, 700);
 
 // State
 let numRows = 51;
-let numCols = 151;
+let numCols = 51;
 let grid = [];
 
 // Initialize modules
