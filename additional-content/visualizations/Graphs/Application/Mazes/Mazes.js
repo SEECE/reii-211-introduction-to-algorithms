@@ -167,6 +167,9 @@ function runSolverStepwise(algo) {
 }
 
 function runSolver(algo) {
+    // Reset solution before solving
+    resetSolution();
+    
     if (ui.isStepMode()) {
         // STEPWISE MODE ON: Manual control (no auto-animation)
         runSolverStepwise(algo);
