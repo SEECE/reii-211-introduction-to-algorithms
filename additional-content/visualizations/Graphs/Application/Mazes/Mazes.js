@@ -56,7 +56,19 @@ function resetSolution() {
     }
     
     if (!startFound) grid[1][1] = CELL.START;
-    if (!endFound) grid[numRows - 2][numCols - 2] = CELL.END;
+    if (!endFound) {
+        // Find the end from the original grid or set default
+        let endSet = false;
+        for (let r = 0; r < numRows; r++) {
+            for (let c = 0; c < numCols; c++) {
+                if (grid[r][c] === CELL.END) {
+                    endSet = true;
+                    break;
+                }
+            }
+        }
+        if (!endSet) grid[numRows - 2][numCols - 2] = CELL.END;
+    }
 
     VisualizationController.reset();
     redraw();
@@ -68,7 +80,8 @@ function resetSolution() {
     }
 }
 
-async function runSolverAnimated(algo) {
+// Auto-animate mode (stepwise OFF - full animation at speed)
+async function runSolverAuto(algo) {
     if (VisualizationController.isSolving()) return;
     VisualizationController.setSolving(true);
 
@@ -102,7 +115,7 @@ async function runSolverAnimated(algo) {
             grid = result.steps[stepIndex].map(row => [...row]);
             redraw();
             stepIndex++;
-            VisualizationController.currentStep = stepIndex; // Update current step
+            VisualizationController.currentStep = stepIndex;
             ui.updateStepUI(stepIndex, result.steps.length);
             
             // Get delay from UI - this will reflect current slider value
@@ -121,31 +134,45 @@ async function runSolverAnimated(algo) {
     animateStep();
 }
 
+// Stepwise mode (stepwise ON - manual control only)
+function runSolverStepwise(algo) {
+    if (VisualizationController.isSolving()) return;
+    VisualizationController.setSolving(true);
+
+    const solveBtn = document.getElementById("solveBtn");
+    solveBtn.disabled = true;
+    solveBtn.textContent = "Solving...";
+
+    resetSolution();
+
+    let result;
+    if (algo === "bfs") {
+        result = window.solveBFS(grid, numRows, numCols, true);
+    } else {
+        result = window.solveDFS(grid, numRows, numCols, true);
+    }
+
+    VisualizationController.setSteps(result.steps);
+    
+    // Just load the first step, don't auto-animate
+    if (result.steps.length > 0) {
+        grid = result.steps[0].map(row => [...row]);
+        VisualizationController.currentStep = 1;
+        redraw();
+    }
+    
+    VisualizationController.setSolving(false);
+    solveBtn.disabled = false;
+    solveBtn.textContent = "Solve Maze";
+}
+
 function runSolver(algo) {
     if (ui.isStepMode()) {
-        runSolverAnimated(algo);
+        // STEPWISE MODE ON: Manual control (no auto-animation)
+        runSolverStepwise(algo);
     } else {
-        if (VisualizationController.isSolving()) return;
-
-        const solveBtn = document.getElementById("solveBtn");
-        solveBtn.disabled = true;
-        solveBtn.textContent = "Solving...";
-
-        resetSolution();
-
-        let result;
-        if (algo === "bfs") {
-            result = window.solveBFS(grid, numRows, numCols, false);
-        } else {
-            result = window.solveDFS(grid, numRows, numCols, false);
-        }
-
-        VisualizationController.reset();
-        grid = result.finalGrid;
-        redraw();
-
-        solveBtn.disabled = false;
-        solveBtn.textContent = "Solve Maze";
+        // STEPWISE MODE OFF: Auto-animation at speed
+        runSolverAuto(algo);
     }
 }
 
@@ -193,6 +220,9 @@ function setupEventListeners() {
 
         VisualizationController.reset();
         grid = MazeGenerator.initGrid(numRows, numCols);
+        // Re-add start and end
+        grid[1][1] = CELL.START;
+        grid[numRows - 2][numCols - 2] = CELL.END;
         CanvasRenderer.resizeCanvas(numRows, numCols, MAX_CANVAS_W, MAX_CANVAS_H);
         redraw();
         
@@ -242,17 +272,22 @@ function setupEventListeners() {
         
         if (stepControls) stepControls.style.display = e.target.checked ? "flex" : "none";
 
-        if (!e.target.checked && VisualizationController.isSolving()) {
-            // Cancel animation if switching modes mid-solve
-            if (animationTimeout) {
-                clearTimeout(animationTimeout);
-                animationTimeout = null;
-            }
-            VisualizationController.setSolving(false);
+        // Cancel any ongoing animation when toggling mode
+        if (animationTimeout) {
+            clearTimeout(animationTimeout);
+            animationTimeout = null;
         }
-        if (!e.target.checked) {
-            VisualizationController.reset();
+        VisualizationController.setSolving(false);
+        VisualizationController.reset();
+        
+        // Reset grid to original maze state
+        const solveBtn = document.getElementById("solveBtn");
+        if (solveBtn) {
+            solveBtn.disabled = false;
+            solveBtn.textContent = "Solve Maze";
         }
+        
+        redraw();
         ui.updateStepUI(VisualizationController.getCurrentStep(), VisualizationController.getTotalSteps());
     });
 

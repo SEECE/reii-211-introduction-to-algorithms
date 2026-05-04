@@ -49,12 +49,13 @@ const UIControls = (function () {
                     <h3>Visualisation</h3>
                     <label style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
                         <input type="checkbox" id="visualiseCheck">
-                        Step-by-step mode
+                        Step-by-step mode (manual)
                     </label>
                     
                     <div class="control-group" id="speedControl" style="margin-top: 8px;">
-                        <label>Speed: <span class="range-val" id="val-speed">Normal</span></label>
+                        <label>Animation Speed: <span class="range-val" id="val-speed">Normal</span></label>
                         <input type="range" id="slider-speed" min="0" max="100" value="50" />
+                        <small style="display:block; margin-top:4px; color:#666;">Faster ← → Slower</small>
                     </div>
                     
                     <div id="stepControls">
@@ -99,19 +100,29 @@ const UIControls = (function () {
                 const speed = parseInt(document.getElementById("slider-speed")?.value || 50, 10);
                 const speedVal = document.getElementById("val-speed");
                 
-                // Speed label mapping
+                // Speed label mapping - INVERTED: higher slider value = faster animation
                 let speedText = "Normal";
-                if (speed <= 10) speedText = "Very Slow";
-                else if (speed <= 30) speedText = "Slow";
-                else if (speed <= 70) speedText = "Normal";
-                else if (speed <= 90) speedText = "Fast";
-                else speedText = "Very Fast";
+                let delay;
+                
+                if (speed <= 10) {
+                    speedText = "Very Fast";
+                    delay = 10;
+                } else if (speed <= 30) {
+                    speedText = "Fast";
+                    delay = 50;
+                } else if (speed <= 70) {
+                    speedText = "Normal";
+                    delay = 150;
+                } else if (speed <= 90) {
+                    speedText = "Slow";
+                    delay = 350;
+                } else {
+                    speedText = "Very Slow";
+                    delay = 500;
+                }
                 
                 if (speedVal) speedVal.textContent = speedText;
                 
-                // Map 0-100 to delay: 500ms down to 10ms
-                // Lower speed value = slower animation
-                const delay = Math.max(10, 500 - (speed * 4.9));
                 return delay;
             },
             isStepMode: () => document.getElementById("visualiseCheck")?.checked || false,
