@@ -2,10 +2,10 @@
  * UIControls.js - Handles all UI control panel generation and interactions
  */
 
-const UIControls = (function() {
-    let numRows = 51; 
+const UIControls = (function () {
+    let numRows = 51;
     let numCols = 51;
-    
+
     function generateControlsHTML() {
         return `
             <div class="controls">
@@ -53,8 +53,8 @@ const UIControls = (function() {
                     </label>
                     
                     <div class="control-group" id="speedControl" style="margin-top: 8px;">
-                        <label>Speed: <span class="range-val" id="val-speed">10×</span></label>
-                        <input type="range" id="slider-speed" min="1" max="100" value="10" />
+                        <label>Speed: <span class="range-val" id="val-speed">Normal</span></label>
+                        <input type="range" id="slider-speed" min="0" max="100" value="50" />
                     </div>
                     
                     <div id="stepControls">
@@ -66,7 +66,7 @@ const UIControls = (function() {
             </div>
         `;
     }
-    
+
     function generateLegendHTML() {
         return `
             <div class="legend">
@@ -79,37 +79,49 @@ const UIControls = (function() {
             </div>
         `;
     }
-    
+
     function initControls() {
         const controlsPanel = document.getElementById('controls-panel');
         const legendPanel = document.getElementById('legend');
-        
+
         if (controlsPanel) {
             controlsPanel.innerHTML = generateControlsHTML();
         }
         if (legendPanel) {
             legendPanel.innerHTML = generateLegendHTML();
         }
-        
-        // Store references to UI elements
+
         return {
             getNumRows: () => parseInt(document.getElementById("gridRows")?.value || numRows, 10),
             getNumCols: () => parseInt(document.getElementById("gridCols")?.value || numCols, 10),
             getAlgorithm: () => document.querySelector("input[name='algorithm']:checked")?.value,
             getSpeedDelay: () => {
-                const speed = document.getElementById("slider-speed")?.value || 10;
+                const speed = parseInt(document.getElementById("slider-speed")?.value || 50, 10);
                 const speedVal = document.getElementById("val-speed");
-                if (speedVal) speedVal.textContent = `${speed}×`;
-                return Math.max(2, 200 - (speed * 1.98));
+                
+                // Speed label mapping
+                let speedText = "Normal";
+                if (speed <= 10) speedText = "Very Slow";
+                else if (speed <= 30) speedText = "Slow";
+                else if (speed <= 70) speedText = "Normal";
+                else if (speed <= 90) speedText = "Fast";
+                else speedText = "Very Fast";
+                
+                if (speedVal) speedVal.textContent = speedText;
+                
+                // Map 0-100 to delay: 500ms down to 10ms
+                // Lower speed value = slower animation
+                const delay = Math.max(10, 500 - (speed * 4.9));
+                return delay;
             },
             isStepMode: () => document.getElementById("visualiseCheck")?.checked || false,
             updateStepUI: (currentStep, totalSteps) => {
                 const pill = document.getElementById("stepPill");
                 const backBtn = document.getElementById("stepBackBtn");
                 const fwdBtn = document.getElementById("stepForwardBtn");
-                
+
                 if (!pill) return;
-                
+
                 if (totalSteps === 0) {
                     pill.style.display = "none";
                     if (backBtn) backBtn.disabled = true;
@@ -123,7 +135,7 @@ const UIControls = (function() {
             }
         };
     }
-    
+
     return {
         generateControlsHTML,
         generateLegendHTML,

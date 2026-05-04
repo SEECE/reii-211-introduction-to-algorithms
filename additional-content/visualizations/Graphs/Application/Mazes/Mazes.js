@@ -30,7 +30,7 @@ function redraw() {
 
 function resetSolution() {
     if (VisualizationController.isSolving()) return;
-    
+
     for (let r = 0; r < numRows; r++) {
         for (let c = 0; c < numCols; c++) {
             if (grid[r][c] === CELL.VISITED || grid[r][c] === CELL.SOLUTION) {
@@ -40,10 +40,10 @@ function resetSolution() {
     }
     grid[1][1] = CELL.START;
     grid[numRows - 2][numCols - 2] = CELL.END;
-    
+
     VisualizationController.reset();
     redraw();
-    
+
     const solveBtn = document.getElementById("solveBtn");
     if (solveBtn) {
         solveBtn.disabled = false;
@@ -54,29 +54,29 @@ function resetSolution() {
 async function runSolverAnimated(algo) {
     if (VisualizationController.isSolving()) return;
     VisualizationController.setSolving(true);
-    
+
     const solveBtn = document.getElementById("solveBtn");
     solveBtn.disabled = true;
     solveBtn.textContent = "Solving...";
-    
+
     resetSolution();
-    
+
     let result;
     if (algo === "bfs") {
         result = window.solveBFS(grid, numRows, numCols, true);
     } else {
         result = window.solveDFS(grid, numRows, numCols, true);
     }
-    
+
     VisualizationController.setSteps(result.steps);
-    
+
     for (let i = 0; i < result.steps.length; i++) {
         if (!VisualizationController.isSolving()) break;
         grid = result.steps[i].map(row => [...row]);
         redraw();
         await new Promise(resolve => setTimeout(resolve, ui.getSpeedDelay()));
     }
-    
+
     VisualizationController.setSolving(false);
     solveBtn.disabled = false;
     solveBtn.textContent = "Solve Maze";
@@ -87,24 +87,24 @@ function runSolver(algo) {
         runSolverAnimated(algo);
     } else {
         if (VisualizationController.isSolving()) return;
-        
+
         const solveBtn = document.getElementById("solveBtn");
         solveBtn.disabled = true;
         solveBtn.textContent = "Solving...";
-        
+
         resetSolution();
-        
+
         let result;
         if (algo === "bfs") {
             result = window.solveBFS(grid, numRows, numCols, false);
         } else {
             result = window.solveDFS(grid, numRows, numCols, false);
         }
-        
+
         VisualizationController.reset();
         grid = result.finalGrid;
         redraw();
-        
+
         solveBtn.disabled = false;
         solveBtn.textContent = "Solve Maze";
     }
@@ -114,41 +114,41 @@ function runSolver(algo) {
 function setupEventListeners() {
     document.getElementById("generateBtn")?.addEventListener("click", () => {
         if (VisualizationController.isSolving()) return;
-        
+
         const rawRows = ui.getNumRows();
         const rawCols = ui.getNumCols();
-        
+
         numRows = forceOdd(rawRows, 5, 201);
         numCols = forceOdd(rawCols, 5, 401);
-        
+
         document.getElementById("gridRows").value = numRows;
         document.getElementById("gridCols").value = numCols;
-        
+
         VisualizationController.reset();
         grid = MazeGenerator.generateMaze(numRows, numCols);
         CanvasRenderer.resizeCanvas(numRows, numCols, MAX_CANVAS_W, MAX_CANVAS_H);
         redraw();
     });
-    
+
     document.getElementById("clearBtn")?.addEventListener("click", () => {
         if (VisualizationController.isSolving()) return;
-        
+
         VisualizationController.reset();
         grid = MazeGenerator.initGrid(numRows, numCols);
         CanvasRenderer.resizeCanvas(numRows, numCols, MAX_CANVAS_W, MAX_CANVAS_H);
         redraw();
     });
-    
+
     document.getElementById("resetSolutionBtn")?.addEventListener("click", () => {
         resetSolution();
     });
-    
+
     document.getElementById("solveBtn")?.addEventListener("click", () => {
         if (VisualizationController.isSolving()) return;
         const algo = ui.getAlgorithm();
         runSolver(algo);
     });
-    
+
     document.getElementById("stepBackBtn")?.addEventListener("click", () => {
         if (VisualizationController.isSolving()) return;
         const stepIndex = VisualizationController.prevStep();
@@ -160,7 +160,7 @@ function setupEventListeners() {
             }
         }
     });
-    
+
     document.getElementById("stepForwardBtn")?.addEventListener("click", () => {
         if (VisualizationController.isSolving()) return;
         const stepIndex = VisualizationController.nextStep();
@@ -172,12 +172,20 @@ function setupEventListeners() {
             }
         }
     });
-    
+
     document.getElementById("visualiseCheck")?.addEventListener("change", (e) => {
         const stepControls = document.getElementById("stepControls");
-        const speedControl = document.getElementById("speedControl");
+        const speedControl = document.getElementById("speedControl"); // This is the slider
+
+        // Step controls (Back/Forward) should only show in step mode
         if (stepControls) stepControls.style.display = e.target.checked ? "flex" : "none";
-        if (speedControl) speedControl.style.display = e.target.checked ? "block" : "none";
+
+        // KEEP SPEED CONTROL ALWAYS VISIBLE (Remove the toggle for speedControl)
+        // speedControl.style.display = "block"; // You can just set this to always show
+
+        if (!e.target.checked && VisualizationController.isSolving()) {
+            VisualizationController.setSolving(false);
+        }
         if (!e.target.checked && VisualizationController.isSolving()) {
             VisualizationController.setSolving(false);
         }
@@ -186,12 +194,17 @@ function setupEventListeners() {
         }
         ui.updateStepUI(VisualizationController.getCurrentStep(), VisualizationController.getTotalSteps());
     });
-    
+
     document.querySelectorAll("input[name='algorithm']").forEach(radio => {
         radio.addEventListener("change", () => {
             document.querySelectorAll(".radio-option").forEach(el => el.classList.remove("selected"));
             radio.closest(".radio-option").classList.add("selected");
         });
+    });
+
+
+    document.getElementById("slider-speed")?.addEventListener("input", () => {
+        ui.getSpeedDelay(); // just to refresh label
     });
 }
 
@@ -199,9 +212,10 @@ function setupEventListeners() {
 (function init() {
     const stepControls = document.getElementById("stepControls");
     const speedControl = document.getElementById("speedControl");
+
     if (stepControls) stepControls.style.display = "none";
-    if (speedControl) speedControl.style.display = "none";
-    
+    if (speedControl) speedControl.style.display = "block";
+
     grid = MazeGenerator.generateMaze(numRows, numCols);
     CanvasRenderer.resizeCanvas(numRows, numCols, MAX_CANVAS_W, MAX_CANVAS_H);
     redraw();
