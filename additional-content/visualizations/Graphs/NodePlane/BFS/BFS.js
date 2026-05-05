@@ -164,7 +164,7 @@
           /* Check target */
           if (targetId && v === targetId) {
             targetFound = v;
-            snap('found', u, v, { msg: `🎯 Target ${nodeName(v)} found at level ${level[v]}!` });
+            snap('found', u, v, { msg: `Target ${nodeName(v)} found at level ${level[v]}!` });
           }
         }
       }

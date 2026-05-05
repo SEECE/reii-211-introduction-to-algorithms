@@ -175,7 +175,7 @@
 
       if (targetId && startId === targetId) {
         targetFound = startId;
-        snap('found', startId, null, `🎯 Target ${name(startId)} found!`);
+        snap('found', startId, null, ` Target ${name(startId)} found!`);
       }
 
       /* Explicit stack: each frame holds the node and its neighbour iterator */
@@ -219,7 +219,7 @@
 
             if (targetId && v === targetId && !targetFound) {
               targetFound = v;
-              snap('found', u, v, `🎯 Target ${name(v)} found at depth ${depth[v]}!`);
+              snap('found', u, v, ` Target ${name(v)} found at depth ${depth[v]}!`);
             }
 
             /* Push new frame */
