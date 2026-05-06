@@ -7,6 +7,24 @@
   <title>Graph Algorithms – Node Plane</title>
   <link rel="stylesheet" href="../../style.css" />
   <link rel="stylesheet" href="PlaneModules/PlaneStyle.css" />
+  <style>
+    /* ── Generator size-toggle labels ─────────────────────────────────── */
+    .gen-size-lbl {
+      font-size: 13px;
+      color: #94a3b8;
+      font-weight: 400;
+      transition: color .2s, font-weight .2s;
+    }
+    .gen-size-lbl.active {
+      color: #6366f1;
+      font-weight: 600;
+    }
+    .gen-size-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  </style>
 </head>
 
 <body>
@@ -34,16 +52,34 @@
         </div>
       </div>
 
-      <!-- View toggle -->
-      <div class="control-group view-toggle-group">
-        <h3>View</h3>
-        <div class="view-toggle">
-          <span id="lbl-plot" style="font-weight:600;color:#6366f1;">Plot</span>
-          <div class="toggle-track" id="view-toggle-track">
-            <div class="toggle-thumb"></div>
+      <!-- View toggle + Generator (side by side) -->
+      <div class="control-group view-toggle-group" style="display:flex;gap:24px;align-items:flex-start;">
+
+        <!-- View -->
+        <div style="flex:1;">
+          <h3>View</h3>
+          <div class="view-toggle">
+            <span id="lbl-plot" style="font-weight:600;color:#6366f1;">Plot</span>
+            <div class="toggle-track" id="view-toggle-track">
+              <div class="toggle-thumb"></div>
+            </div>
+            <span id="lbl-matrix">Matrix</span>
           </div>
-          <span id="lbl-matrix">Matrix</span>
         </div>
+
+        <!-- Generate -->
+        <div style="flex:1;">
+          <h3>Generate</h3>
+          <div class="gen-size-toggle">
+            <span id="lbl-gen-small" class="gen-size-lbl active">Small</span>
+            <div class="toggle-track" id="gen-size-track">
+              <div class="toggle-thumb"></div>
+            </div>
+            <span id="lbl-gen-large" class="gen-size-lbl">Large</span>
+          </div>
+          <button id="generate-btn" style="margin-top:10px;width:100%;">Generate</button>
+        </div>
+
       </div>
 
       <!-- Main Nodes / Edges Toggle -->
@@ -172,6 +208,7 @@
   </div>
 
   <script src="PlaneModules/PlaneScript.js"></script>
+  <script src="PlaneModules/PlaneGenerate.js"></script>
   <script src="ApplyAlgorithm.js"></script>
   <script src="Algorithms/BFS.js"></script>
   <script src="Algorithms/DFS.js"></script>
@@ -191,9 +228,6 @@
         }
       }
 
-      /* Use a MutationObserver to catch each panel the moment AlgoShell
-         injects it, and immediately hide it if it isn't the active algo.
-         This prevents any panel from being visible before switchAlgo runs. */
       const observer = new MutationObserver(() => {
         switchAlgo(sel.value);
       });
@@ -203,6 +237,31 @@
       });
 
       sel.addEventListener('change', () => switchAlgo(sel.value));
+    })();
+
+    /* ── Generator wiring ─────────────────────────────────────────────────── */
+    (function () {
+      let isLarge = false;
+      const track    = document.getElementById('gen-size-track');
+      const lblSmall = document.getElementById('lbl-gen-small');
+      const lblLarge = document.getElementById('lbl-gen-large');
+      const genBtn   = document.getElementById('generate-btn');
+
+      track.addEventListener('click', () => {
+        isLarge = !isLarge;
+        track.classList.toggle('on', isLarge);
+        lblSmall.classList.toggle('active', !isLarge);
+        lblLarge.classList.toggle('active',  isLarge);
+      });
+
+      genBtn.addEventListener('click', () => {
+        if (!window.Plane || !window.Plane.generate) return;
+        if (isLarge) {
+          window.Plane.generate.generateLarge();
+        } else {
+          window.Plane.generate.generateSmall();
+        }
+      });
     })();
   </script>
 

@@ -122,7 +122,7 @@
 
       /* Weight badge */
       const mx  = (cA.x + cB.x) / 2;
-      const my  = (cA.y + cB.y) / 2;
+      const my  = (cA.y + cB.y) / 2 -7;
       const lbl = String(e.weight);
       ctx.font  = `bold 11px 'Segoe UI', sans-serif`;
       const tw  = ctx.measureText(lbl).width;
