@@ -27,9 +27,9 @@
   function refreshNodeDropdowns() {
     const { getNodes } = window.Plane.graph;
     const fromSel = document.getElementById('edge-from');
-    const toSel   = document.getElementById('edge-to');
+    const toSel = document.getElementById('edge-to');
     const prevFrom = fromSel ? fromSel.value : '';
-    const prevTo   = toSel ? toSel.value : '';
+    const prevTo = toSel ? toSel.value : '';
 
     if (fromSel && toSel) {
       [fromSel, toSel].forEach(sel => {
@@ -43,7 +43,7 @@
       });
 
       if (prevFrom) fromSel.value = prevFrom;
-      if (prevTo)   toSel.value = prevTo;
+      if (prevTo) toSel.value = prevTo;
     }
   }
 
@@ -85,17 +85,23 @@
   /* ── View toggle ─────────────────────────────────────────────────────────── */
   function setView(mode) {
     viewMode = mode;
-    const track    = document.getElementById('view-toggle-track');
-    const lblPlot  = document.getElementById('lbl-plot');
-    const lblMat   = document.getElementById('lbl-matrix');
-    const plotEl   = document.getElementById('plane');
-    const matEl    = document.getElementById('matrix-view');
+    const track = document.getElementById('view-toggle-track');
+    const lblPlot = document.getElementById('lbl-plot');
+    const lblMat = document.getElementById('lbl-matrix');
+    const plotEl = document.getElementById('plane');
+    const matEl = document.getElementById('matrix-view');
     const controls = document.querySelectorAll('.controls > :not(.view-toggle-group)');
 
     if (mode === 'matrix') {
-      if (track) track.classList.add('on');
+      if (mode === 'matrix') {
+        if (track) track.classList.add('on');
+        // ...
+      } else {
+        if (track) track.classList.remove('on');
+        // ...
+      }
       if (lblPlot) { lblPlot.style.fontWeight = '400'; lblPlot.style.color = ''; }
-      if (lblMat)  { lblMat.style.fontWeight = '600'; lblMat.style.color = '#6366f1'; }
+      if (lblMat) { lblMat.style.fontWeight = '600'; lblMat.style.color = '#6366f1'; }
       if (plotEl) plotEl.style.display = 'none';
       if (matEl) matEl.classList.add('active');
 
@@ -104,7 +110,7 @@
     } else {
       if (track) track.classList.remove('on');
       if (lblPlot) { lblPlot.style.fontWeight = '600'; lblPlot.style.color = '#6366f1'; }
-      if (lblMat)  { lblMat.style.fontWeight = '400'; lblMat.style.color = ''; }
+      if (lblMat) { lblMat.style.fontWeight = '400'; lblMat.style.color = ''; }
       if (plotEl) plotEl.style.display = 'block';
       if (matEl) matEl.classList.remove('active');
 

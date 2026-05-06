@@ -4,14 +4,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BFS – Node Plane</title>
+  <title>Graph Algorithms – Node Plane</title>
   <link rel="stylesheet" href="../../style.css" />
   <link rel="stylesheet" href="PlaneModules/PlaneStyle.css" />
 </head>
 
 <body>
 
-  <h2>BFS – Node Plane</h2>
+  <h2>Graph Algorithms – Node Plane</h2>
 
   <div class="layout">
 
@@ -20,6 +20,20 @@
          ══════════════════════════════════════════════════════════ -->
     <!-- LEFT CONTROLS -->
     <div class="controls" style="width: 340px; min-width: 340px;">
+
+      <!-- Algorithm selector -->
+      <div class="control-group" id="algo-selector-group">
+        <h3>Algorithm</h3>
+        <div class="input-row">
+          <select id="algo-select" style="width:100%;">
+            <option value="bfs">Breadth-First Search (BFS)</option>
+            <option value="dfs">Depth-First Search (DFS)</option>
+            <option value="prim"    disabled>Prim's MST (coming soon)</option>
+            <option value="dijkstra" disabled>Dijkstra (coming soon)</option>
+            <option value="kruskal" disabled>Kruskal's MST (coming soon)</option>
+          </select>
+        </div>
+      </div>
 
       <!-- View toggle -->
       <div class="control-group view-toggle-group">
@@ -161,6 +175,33 @@
   <script src="PlaneModules/PlaneScript.js"></script>
   <script src="ApplyAlgorithm.js"></script>
   <script src="Algorithms/BFS.js"></script>
+  <script src="Algorithms/DFS.js"></script>
+  <script>
+    /* ── Algorithm panel switcher ─────────────────────────────────────────── */
+    (function () {
+      const ALGOS = ['bfs', 'dfs'];
+
+      function switchAlgo(selected) {
+        for (const prefix of ALGOS) {
+          const panel = document.getElementById(prefix + '-panel');
+          if (panel) panel.style.display = prefix === selected ? '' : 'none';
+        }
+      }
+
+      /* Panels are injected by AlgoShell after PlaneGraph is ready (~50 ms).
+         Poll until both exist, then wire up the dropdown. */
+      function tryWire() {
+        const allReady = ALGOS.every(p => document.getElementById(p + '-panel'));
+        if (!allReady) { setTimeout(tryWire, 100); return; }
+
+        const sel = document.getElementById('algo-select');
+        switchAlgo(sel.value);           /* apply initial selection */
+        sel.addEventListener('change', () => switchAlgo(sel.value));
+      }
+
+      tryWire();
+    })();
+  </script>
 
 </body>
 
