@@ -28,15 +28,34 @@
   function direction(pi, pj, pk) {
     return (pk.x - pi.x) * (pj.y - pi.y) - (pj.x - pi.x) * (pk.y - pi.y);
   }
-
+  function pointNearSegment(p, a, b, threshold) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) return false;
+    // Project p onto the segment, clamped to [0,1]
+    const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq));
+    const closestX = a.x + t * dx;
+    const closestY = a.y + t * dy;
+    const dist = Math.hypot(p.x - closestX, p.y - closestY);
+    return dist < threshold;
+  }
   /* Does the candidate edge (nodeA → nodeB) cross any already-placed edge? */
   function crossesAny(nA, nB, edges, nodeMap) {
+    const allNodes = window.Plane.graph.getNodes();
+
+    // Check if any non-endpoint node lies on (or very near) the segment
+    for (const n of allNodes) {
+      if (n.id === nA.id || n.id === nB.id) continue;
+      if (pointNearSegment(n, nA, nB, 6)) return true;
+    }
+
+    // Check edge-vs-edge crossings as before
     for (const e of edges) {
       const eA = nodeMap[e.from];
       const eB = nodeMap[e.to];
-      /* Skip edges that share an endpoint with the candidate */
       if (e.from === nA.id || e.to === nA.id ||
-        e.from === nB.id || e.to === nB.id) continue;
+          e.from === nB.id || e.to === nB.id) continue;
       if (segmentsIntersect(nA, nB, eA, eB)) return true;
     }
     return false;
