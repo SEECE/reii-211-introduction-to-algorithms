@@ -191,32 +191,55 @@
 
     c.save();
 
-    /* ── SP-tree edges ─────────────────────────────────────────────────────── */
-    for (const e of edges) {
-      const k1 = `${e.from}-${e.to}`;
-      const k2 = `${e.to}-${e.from}`;
-      if (!step.spEdges.has(k1) && !step.spEdges.has(k2)) continue;
+    /* ── Tentative parent-pointer edges (live best-known paths) ──────────── */
+    /*
+     * Instead of drawing only finalised spEdges, we draw every current
+     * parent[] pointer as a tentative edge.  When a relax step updates a
+     * parent the old edge simply disappears and the new one appears — exactly
+     * the behaviour Dijkstra should show.  Finalised edges get the indigo
+     * colour; tentative (not-yet-finalised child) edges get a lighter purple.
+     */
+    for (const [childId, parentId] of Object.entries(step.parent)) {
+      if (parentId === null) continue;
 
-      const nA = PG.nodeById(e.from);
-      const nB = PG.nodeById(e.to);
+      const nA = PG.nodeById(Number(parentId));
+      const nB = PG.nodeById(Number(childId));
       if (!nA || !nB) continue;
 
       const cA = toCanvas(nA.x, nA.y);
       const cB = toCanvas(nB.x, nB.y);
 
-      /* Highlight path edges in gold when target found */
-      const onPath = pathSet.has(e.from) && pathSet.has(e.to) &&
+      /* Is this edge part of the final highlighted shortest-path? */
+      const onPath = pathSet.has(Number(parentId)) && pathSet.has(Number(childId)) &&
         shortestPath.some((id, i) =>
           i + 1 < shortestPath.length &&
-          ((shortestPath[i] === e.from && shortestPath[i + 1] === e.to) ||
-           (shortestPath[i] === e.to   && shortestPath[i + 1] === e.from)));
+          ((shortestPath[i] === Number(parentId) && shortestPath[i + 1] === Number(childId)) ||
+           (shortestPath[i] === Number(childId)  && shortestPath[i + 1] === Number(parentId))));
+
+      /* Child finalised → solid indigo (confirmed SP-tree edge).
+         Child still tentative → dashed lighter purple.              */
+      const childFinalised = step.intree[Number(childId)];
 
       c.beginPath();
       c.moveTo(cA.x, cA.y);
       c.lineTo(cB.x, cB.y);
-      c.strokeStyle = onPath ? '#fbbf24' : '#6366f1';
-      c.lineWidth   = onPath ? 5 : 3;
+
+      if (onPath) {
+        c.strokeStyle = '#fbbf24';   // gold — final shortest path
+        c.lineWidth   = 5;
+        c.setLineDash([]);
+      } else if (childFinalised) {
+        c.strokeStyle = '#6366f1';   // indigo — confirmed SP-tree
+        c.lineWidth   = 3;
+        c.setLineDash([]);
+      } else {
+        c.strokeStyle = '#a78bfa';   // light purple — tentative
+        c.lineWidth   = 2;
+        c.setLineDash([6, 4]);
+      }
+
       c.stroke();
+      c.setLineDash([]);
     }
 
     /* ── Currently examined edge (amber or green dashed) ─────────────────── */
@@ -359,15 +382,23 @@
       <div style="margin-top:8px;display:flex;flex-direction:column;gap:4px;">
         <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#64748b;">
           <span style="width:20px;height:3px;background:#fbbf24;display:inline-block;border-radius:2px;flex-shrink:0;"></span>
-          Shortest path
+          Shortest path (final)
         </div>
         <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#64748b;">
-          <span style="width:20px;height:2.5px;border-top:2.5px dashed #fbbf24;display:inline-block;flex-shrink:0;"></span>
-          Candidate (in queue)
+          <span style="width:20px;height:3px;background:#6366f1;display:inline-block;border-radius:2px;flex-shrink:0;"></span>
+          SP-tree edge (confirmed)
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#64748b;">
+          <span style="width:20px;height:2.5px;border-top:2.5px dashed #a78bfa;display:inline-block;flex-shrink:0;"></span>
+          Tentative best path (may change)
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#64748b;">
+          <span style="width:20px;height:2.5px;border-top:2.5px dashed #f59e0b;display:inline-block;flex-shrink:0;"></span>
+          Edge being examined
         </div>
         <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#64748b;">
           <span style="width:20px;height:2.5px;border-top:2.5px dashed #22c55e;display:inline-block;flex-shrink:0;"></span>
-          Edge relaxed
+          Edge just relaxed
         </div>
       </div>
     `,
