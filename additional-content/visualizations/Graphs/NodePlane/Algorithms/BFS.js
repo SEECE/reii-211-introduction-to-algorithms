@@ -82,10 +82,10 @@
     while (queue.length > 0) {
       const u = queue.shift();
 
-      snap('dequeue', u, null,
+      snap('dequeue', u, null,z
         `Dequeued ${nodeName(u)} — processing its neighbours.`);
 
-      for (const { nodeId: v } of (adjList.get(u) || [])) {
+      for (const { nodeId: v } of [...(adjList.get(u) || [])].sort((a, b) => nodeName(a.nodeId).localeCompare(nodeName(b.nodeId)))) {
         snap('edge', u, v,
           `Edge (${nodeName(u)}, ${nodeName(v)}) — state[${nodeName(v)}] = ${state[v]}`);
 
