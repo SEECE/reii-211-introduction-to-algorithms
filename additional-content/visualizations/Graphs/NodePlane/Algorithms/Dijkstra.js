@@ -107,7 +107,7 @@
       }
 
       /* ── Relax neighbours ──────────────────────────────────────────────── */
-      for (const { nodeId: w, weight: wt } of (adjList.get(v) || [])) {
+      for (const { nodeId: w, weight: wt } of [...(adjList.get(v) || [])].sort((a, b) => name(a.nodeId).localeCompare(name(b.nodeId)))) {
         snap('examine', v, w,
           `Examining edge (${name(v)}, ${name(w)}) weight ${wt}. ` +
           `distance[${name(w)}] = ${distance[w] === MAXINT ? '∞' : distance[w]}.`);
@@ -124,7 +124,7 @@
       /* ── Pick next: min distance outside tree ──────────────────────────── */
       let dist = MAXINT;
       let next = null;
-      for (const n of nodes) {
+      for (const n of [...nodes].sort((a, b) => name(a.id).localeCompare(name(b.id)))) {
         if (!intree[n.id] && distance[n.id] < dist) {
           dist = distance[n.id];
           next = n.id;
