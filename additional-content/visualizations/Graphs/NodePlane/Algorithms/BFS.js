@@ -82,7 +82,7 @@
     while (queue.length > 0) {
       const u = queue.shift();
 
-      snap('dequeue', u, null,z
+      snap('dequeue', u, null,
         `Dequeued ${nodeName(u)} — processing its neighbours.`);
 
       for (const { nodeId: v } of [...(adjList.get(u) || [])].sort((a, b) => nodeName(a.nodeId).localeCompare(nodeName(b.nodeId)))) {
