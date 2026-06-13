@@ -8,7 +8,7 @@ The visualizations here are **not examinable by default**, but they are strongly
 - Building intuition beyond formal proofs
 You can treat this section as a sandbox: explore freely, experiment, and revisit it when a concept from the study units feels abstract or unclear.
 ## Available Visualizations
-The playground currently includes tools for **Sorting**, **Scheduling**, and **Heuristics**, with more being added over time.
+The playground currently includes tools for **Sorting**, **Scheduling**, **Heuristics**, and **Graphs**.  
 
 **[Launch Visualisation Playground](https://seece.github.io/reii-211-introduction-to-algorithms/additional-content/visualizations/)**
 
