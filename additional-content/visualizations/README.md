@@ -10,7 +10,7 @@ You can treat this section as a sandbox: explore freely, experiment, and revisit
 ## Available Visualizations
 The playground currently includes tools for **Sorting**, **Scheduling**, and **Heuristics**, with more being added over time.
 
-**[Launch Visualisation Playground](https://damianerys.github.io/reii-211-introduction-to-algorithms/additional-content/visualizations/)**
+**[Launch Visualisation Playground](https://seece.github.io/reii-211-introduction-to-algorithms/additional-content/visualizations/)**
 
 ## How to Use These Tools
 These visualizations are intended as **exploratory aids**, not formal proof tools.
